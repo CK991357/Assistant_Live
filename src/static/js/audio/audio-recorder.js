@@ -38,18 +38,12 @@ export class AudioRecorder {
      */
     async start(onAudioData) {
         this.onAudioData = onAudioData;
-        this.silenceThreshold = 1000; // 1 second silence threshold
-        this.lastSoundTime = 0;
-        this.isSpeaking = false;
-        
         try {
             // Request microphone access
             this.stream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
                     channelCount: 1,
-                    sampleRate: this.sampleRate,
-                    echoCancellation: true,
-                    noiseSuppression: true
+                    sampleRate: this.sampleRate
                 } 
             });
             
@@ -64,22 +58,7 @@ export class AudioRecorder {
             this.processor.port.onmessage = (event) => {
                 if (event.data.event === 'chunk' && this.onAudioData && this.isRecording) {
                     const base64Data = this.arrayBufferToBase64(event.data.data.int16arrayBuffer);
-                    const currentTime = Date.now();
-                    const hasAudio = this.checkAudioActivity(event.data.data.int16arrayBuffer);
-                    
-                    if (hasAudio) {
-                        this.lastSoundTime = currentTime;
-                        if (!this.isSpeaking) {
-                            this.isSpeaking = true;
-                            this.onAudioData(base64Data, 'start');
-                        } else {
-                            this.onAudioData(base64Data, 'continue');
-                        }
-                    } else if (this.isSpeaking && 
-                              currentTime - this.lastSoundTime > this.silenceThreshold) {
-                        this.isSpeaking = false;
-                        this.onAudioData(base64Data, 'end');
-                    }
+                    this.onAudioData(base64Data);
                 }
             };
 
@@ -163,4 +142,4 @@ export class AudioRecorder {
             );
         }
     }
-}
+} 
